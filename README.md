@@ -67,17 +67,25 @@ Run the committed end-to-end local workflow against this repository:
 ```
 
 The script runs formatting, strict Clippy, the workspace tests, and a locked
-release build. It then ingests this Git repository through serial and parallel
-replay over a bounded one-week repository-time window, validates a
-persistent-cache miss and hit using the deterministic custom-log fixture,
-exports that fixture as 130 PNG frames, verifies an FFV1 video with `ffprobe`,
-and invokes the native package wrapper for supported Unix hosts. Each run
-keeps its evidence in a unique `target/dogfood/run.*` directory.
+release build. It ingests the selected Git repository through serial and
+parallel replay over a bounded diagnostic window, validates a persistent-cache
+miss and hit using the deterministic custom-log fixture, and exports that
+fixture as 130 PNG reference frames. It then renders the selected repository's
+complete checked-out `HEAD` history to
+`target/dogfood/run.*/repository-history.mkv`, verifies the FFV1 stream with
+`ffprobe`, and invokes the native package wrapper for supported Unix hosts.
+Each run keeps all evidence in its unique `target/dogfood/run.*` directory.
 
-Pass another local Git repository as the sole positional argument. Set
-`DOGFOOD_THREADS` or `DOGFOOD_HISTORY_SECONDS` to change the fixed worker count
-or bounded replay window. Add `--view` to launch the interactive viewer after
-every automated check passes:
+The full-history video defaults to 1280x720, 30 FPS, `0.1` seconds per
+repository day, track camera, and deterministic seed 31. Override
+`DOGFOOD_VIDEO_VIEWPORT`, `DOGFOOD_VIDEO_FRAME_RATE`, or
+`DOGFOOD_VIDEO_SECONDS_PER_DAY` when a different output size, cadence, or
+duration is required. `DOGFOOD_THREADS` controls diagnostics, while
+`DOGFOOD_HISTORY_SECONDS` changes only the bounded diagnostic replay window.
+The video export itself always covers the first through final event.
+
+Pass another local Git repository as the sole positional argument. Add `--view`
+to launch the interactive viewer after every automated check passes:
 
 ```sh
 ./scripts/dogfood.sh --view /path/to/local/repository
@@ -192,6 +200,11 @@ uses a three-frame queue, a three-frame byte cap, a 64 KiB stderr bound, and a
 non-zero exit, timeout, cancellation, or writer failure kills and reaps the
 child and leaves no final video. See [`docs/export.md`](docs/export.md) and
 [`docs/security.md`](docs/security.md).
+
+FFV1 is the Rust fork's deterministic lossless archival choice. The original
+C++ Gource does not select FFV1 or directly manage an encoder: its
+`--output-ppm-stream` option emits a PPM frame stream or file for the user to
+pipe into an external encoder.
 
 ### `diagnose`
 

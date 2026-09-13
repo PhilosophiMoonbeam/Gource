@@ -15,8 +15,8 @@ Usage: scripts/dogfood.sh [--view] [REPOSITORY]
 
 Run the complete local quality gates, build the release binary, ingest the
 selected Git repository through serial and parallel replay, exercise a private
-cache miss and hit, export deterministic PNG frames and FFV1 video, and build a
-native package when this host has a packaging wrapper.
+cache miss and hit, render the complete selected repository history to FFV1
+video, export deterministic PNG reference frames, and build a native package.
 
 Options:
   --view       Launch the interactive viewer on REPOSITORY after all automated
@@ -24,10 +24,15 @@ Options:
   -h, --help   Show this help.
 
 Environment:
-  DOGFOOD_THREADS         Diagnose worker count (default: 4).
-  DOGFOOD_HISTORY_SECONDS Repository-time window replayed from the first commit
-                          (default: 604800, one week).
-  CARGO_TARGET_DIR        Cargo target directory; artifacts are kept below it.
+  DOGFOOD_THREADS               Diagnose worker count (default: 4).
+  DOGFOOD_HISTORY_SECONDS       Repository-time window used by diagnose from
+                                the first commit (default: 604800, one week).
+  DOGFOOD_VIDEO_VIEWPORT        Full-history video WIDTHxHEIGHT (default:
+                                1280x720).
+  DOGFOOD_VIDEO_FRAME_RATE      Full-history video FPS or ratio (default: 30).
+  DOGFOOD_VIDEO_SECONDS_PER_DAY Full-history pacing (default: 0.1).
+  CARGO_TARGET_DIR              Cargo target directory; artifacts are kept
+                                below it.
 EOF
 }
 
@@ -74,6 +79,21 @@ if ! [[ ${DOGFOOD_HISTORY_SECONDS:-604800} =~ ^[1-9][0-9]*$ ]]; then
     exit 2
 fi
 history_seconds=${DOGFOOD_HISTORY_SECONDS:-604800}
+video_viewport=${DOGFOOD_VIDEO_VIEWPORT:-1280x720}
+if [[ $video_viewport =~ ^([1-9][0-9]*)x([1-9][0-9]*)$ ]]; then
+    video_width=${BASH_REMATCH[1]}
+    video_height=${BASH_REMATCH[2]}
+else
+    printf 'dogfood: DOGFOOD_VIDEO_VIEWPORT must be WIDTHxHEIGHT\n' >&2
+    exit 2
+fi
+video_frame_rate=${DOGFOOD_VIDEO_FRAME_RATE:-30}
+video_seconds_per_day=${DOGFOOD_VIDEO_SECONDS_PER_DAY:-0.1}
+python3 -c 'import math, sys; value = float(sys.argv[1]); assert math.isfinite(value) and value > 0' \
+    "$video_seconds_per_day" || {
+    printf 'dogfood: DOGFOOD_VIDEO_SECONDS_PER_DAY must be finite and positive\n' >&2
+    exit 2
+}
 
 repository=$(CDPATH='' cd -- "$repository" && pwd -P)
 git -C "$repository" rev-parse --is-inside-work-tree >/dev/null
@@ -101,13 +121,13 @@ artifacts=$(mktemp -d "$target_dir/dogfood/run.XXXXXX")
 binary=$target_dir/release/gource-app
 fixture=$repo_root/tests/fixtures/visual-hierarchy-activity.log
 frames=$artifacts/frames
-fixture_start=$(python3 -c 'import pathlib, sys; print(int(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").splitlines()[0].split("|", 1)[0]))' "$fixture")
-fixture_end=$((fixture_start + 1))
-video=$artifacts/visual-hierarchy-activity.mkv
+video=$artifacts/repository-history.mkv
 cache=$artifacts/cache
 
 printf 'dogfood: repository=%s\n' "$repository"
 printf 'dogfood: replay-window=%s..%s\n' "$history_start" "$history_end"
+printf 'dogfood: full-video=%s at %s fps, %s seconds/day\n' \
+    "$video_viewport" "$video_frame_rate" "$video_seconds_per_day"
 printf 'dogfood: artifacts=%s\n' "$artifacts"
 
 cd "$repo_root"
@@ -141,17 +161,19 @@ if ((${#frame_files[@]} != 130)); then
 fi
 [[ -s $frames/manifest.toml ]]
 
-"$binary" export --input "$fixture" --viewport 64x64 --frame-rate 2 \
-    --realtime --start "$fixture_start" --end "$fixture_end" --video --output "$video"
+"$binary" export --input "$repository" --viewport "$video_viewport" \
+    --frame-rate "$video_frame_rate" --seconds-per-day "$video_seconds_per_day" \
+    --auto-skip-seconds 3 --camera track --seed 31 --video --output "$video"
 ffprobe -v error -select_streams v:0 \
-    -show_entries stream=codec_name,width,height -of default=noprint_wrappers=1 "$video" \
-    >"$artifacts/video-probe.txt"
+    -show_entries stream=codec_name,width,height -show_entries format=duration \
+    -of default=noprint_wrappers=1 "$video" >"$artifacts/video-probe.txt"
 if ! grep -Fxq 'codec_name=ffv1' "$artifacts/video-probe.txt" ||
-   ! grep -Fxq 'width=64' "$artifacts/video-probe.txt" ||
-   ! grep -Fxq 'height=64' "$artifacts/video-probe.txt"; then
-    printf 'dogfood: FFmpeg artifact metadata did not match the expected FFV1 64x64 stream\n' >&2
+   ! grep -Fxq "width=$video_width" "$artifacts/video-probe.txt" ||
+   ! grep -Fxq "height=$video_height" "$artifacts/video-probe.txt"; then
+    printf 'dogfood: full-history FFV1 metadata did not match the requested viewport\n' >&2
     exit 1
 fi
+[[ -s ${video%.mkv}.manifest.toml ]]
 
 case "$(uname -s):$(uname -m)" in
     Linux:x86_64)
@@ -168,6 +190,7 @@ esac
 
 printf 'dogfood: PASS\n'
 printf 'dogfood: artifacts=%s\n' "$artifacts"
+printf 'dogfood: full-history-video=%s\n' "$video"
 
 if [[ $launch_view == true ]]; then
     exec "$binary" view --input "$repository" --viewport 1280x720
