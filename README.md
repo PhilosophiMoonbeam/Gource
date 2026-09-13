@@ -196,9 +196,11 @@ Use `--video` to select the supervised FFmpeg sink:
 The sink passes raw RGBA frames to `ffmpeg` through stdin and requests FFV1
 level 3, intra frames, Matroska output, and the configured dimensions/rate. It
 uses a three-frame queue, a three-frame byte cap, a 64 KiB stderr bound, and a
-30-second deadline. Backpressure is applied instead of dropping frames. A
-non-zero exit, timeout, cancellation, or writer failure kills and reaps the
-child and leaves no final video. See [`docs/export.md`](docs/export.md) and
+30-second stall timeout. Rendering may run for any duration; the timeout applies
+only while a full queue blocks frame delivery or while the encoder shuts down.
+Backpressure is applied instead of dropping frames. A non-zero exit, stall,
+cancellation, or writer failure kills and reaps the child and leaves no final
+video. See [`docs/export.md`](docs/export.md) and
 [`docs/security.md`](docs/security.md).
 
 FFV1 is the Rust fork's deterministic lossless archival choice. The original

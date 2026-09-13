@@ -490,7 +490,8 @@ pub struct FfmpegConfig {
     pub queue_capacity: usize,
     pub max_queue_bytes: u64,
     pub max_stderr_bytes: usize,
-    pub timeout: Duration,
+    /// Maximum continuous wait for queue capacity or encoder shutdown.
+    pub stall_timeout: Duration,
     pub color_space: String,
     pub color_primaries: String,
     pub color_transfer: String,
@@ -509,7 +510,7 @@ impl FfmpegConfig {
             queue_capacity: 3,
             max_queue_bytes: 3 * checked_frame_len(width, height).unwrap_or(0) as u64,
             max_stderr_bytes: 64 * 1024,
-            timeout: Duration::from_secs(30),
+            stall_timeout: Duration::from_secs(30),
             color_space: "bt709".to_owned(),
             color_primaries: "bt709".to_owned(),
             color_transfer: "bt709".to_owned(),
@@ -582,7 +583,6 @@ pub struct FfmpegSink {
     next_index: u64,
     bytes: u64,
     terminated: bool,
-    deadline: Instant,
     finalized: bool,
 }
 
@@ -622,9 +622,6 @@ impl FfmpegSink {
         if config.output.exists() {
             return Err(SinkError::OutputExists(config.output));
         }
-        let deadline = Instant::now()
-            .checked_add(config.timeout)
-            .unwrap_or_else(Instant::now);
         let staging_path = make_staging_path(&config.output, "video")?;
         let mut command = Command::new(&config.executable);
         command.args(config.argv(&staging_path));
@@ -712,7 +709,6 @@ impl FfmpegSink {
             expected_len,
             next_index: 0,
             bytes: 0,
-            deadline,
             terminated: false,
             finalized: false,
         })
@@ -791,12 +787,6 @@ impl FrameSink for FfmpegSink {
                 stderr: self.stderr_tail(),
             });
         }
-        if Instant::now() >= self.deadline {
-            self.abort_and_remove();
-            return Err(SinkError::Timeout {
-                stderr: self.stderr_tail(),
-            });
-        }
         fs::rename(&self.staging_path, &self.config.output).map_err(|error| {
             self.abort_and_remove();
             SinkError::Publish(error)
@@ -853,18 +843,13 @@ impl FfmpegSink {
 
     fn wait_writer_and_child(&mut self) -> Result<ExitStatus, SinkError> {
         self.sender.take();
+        let started = Instant::now();
         let mut completion = None;
         let mut status = None;
         loop {
             if self.cancelled.load(Ordering::Acquire) {
                 self.abort_and_remove();
                 return Err(SinkError::EncoderCancelled {
-                    stderr: self.stderr_tail(),
-                });
-            }
-            if Instant::now() >= self.deadline {
-                self.abort_and_remove();
-                return Err(SinkError::Timeout {
                     stderr: self.stderr_tail(),
                 });
             }
@@ -914,22 +899,23 @@ impl FfmpegSink {
                     return Ok(status);
                 }
             }
-            let remaining = self.deadline.saturating_duration_since(Instant::now());
+            if started.elapsed() >= self.config.stall_timeout {
+                self.abort_and_remove();
+                return Err(SinkError::Timeout {
+                    stderr: self.stderr_tail(),
+                });
+            }
+            let remaining = self.config.stall_timeout.saturating_sub(started.elapsed());
             thread::sleep(std::cmp::min(Duration::from_millis(5), remaining));
         }
     }
 
     fn push_packet_wait(&mut self, mut packet: FramePacket) -> Result<(), SinkError> {
+        let mut stall_started = None;
         loop {
             if self.cancelled.load(Ordering::Acquire) {
                 self.abort_and_remove();
                 return Err(SinkError::Cancelled);
-            }
-            if Instant::now() >= self.deadline {
-                self.abort_and_remove();
-                return Err(SinkError::Timeout {
-                    stderr: self.stderr_tail(),
-                });
             }
             let completion = match self.completion.try_recv() {
                 Ok(done) => Some(done.result),
@@ -992,13 +978,24 @@ impl FfmpegSink {
                 }
                 Err(mpsc::TrySendError::Full(next)) => {
                     packet = next;
+                    let started = *stall_started.get_or_insert_with(Instant::now);
+                    if started.elapsed() >= self.config.stall_timeout {
+                        self.abort_and_remove();
+                        return Err(SinkError::Timeout {
+                            stderr: self.stderr_tail(),
+                        });
+                    }
                 }
                 Err(mpsc::TrySendError::Disconnected(_)) => {
                     self.abort_and_remove();
                     return Err(SinkError::QueueDisconnected);
                 }
             }
-            let remaining = self.deadline.saturating_duration_since(Instant::now());
+            let remaining = self.config.stall_timeout.saturating_sub(
+                stall_started
+                    .expect("full queue starts stall timer")
+                    .elapsed(),
+            );
             thread::sleep(std::cmp::min(Duration::from_millis(2), remaining));
         }
     }
@@ -1263,7 +1260,7 @@ mod tests {
     }
     #[cfg(unix)]
     #[test]
-    fn ffmpeg_blocked_queue_honors_job_deadline_and_reaps() {
+    fn ffmpeg_blocked_queue_honors_stall_timeout_and_reaps() {
         let directory = tempdir().unwrap();
         let output = directory.path().join("blocked.mkv");
         let (_fixture_directory, executable) = fixture("exec sleep 30");
@@ -1271,7 +1268,7 @@ mod tests {
         config.executable = executable;
         config.queue_capacity = 1;
         config.max_queue_bytes = 256 * 256 * 4;
-        config.timeout = Duration::from_millis(75);
+        config.stall_timeout = Duration::from_millis(75);
         let frame = vec![0u8; 256 * 256 * 4];
         let mut sink = FfmpegSink::spawn(config).unwrap();
         let staging = sink.staging_path().to_owned();
@@ -1314,7 +1311,7 @@ mod tests {
         config.executable = executable;
         config.queue_capacity = 1;
         config.max_queue_bytes = 1024 * 1024 * 4;
-        config.timeout = Duration::from_secs(2);
+        config.stall_timeout = Duration::from_secs(2);
         let frame = vec![0u8; 1024 * 1024 * 4];
         let mut sink =
             FfmpegSink::spawn_with_cancellation(config, Arc::clone(&cancellation)).unwrap();
@@ -1364,7 +1361,7 @@ mod tests {
         config.executable = executable;
         config.queue_capacity = 1;
         config.max_queue_bytes = 4;
-        config.timeout = Duration::from_secs(2);
+        config.stall_timeout = Duration::from_secs(2);
         let mut sink = FfmpegSink::spawn(config).unwrap();
         let first = [1, 2, 3, 4];
         let second = [5, 6, 7, 8];
@@ -1377,6 +1374,29 @@ mod tests {
         assert_eq!(report.bytes, 8);
         assert_eq!(fs::read(&output).unwrap(), [1, 2, 3, 4, 5, 6, 7, 8]);
         assert!(!sink.staging_path().exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn ffmpeg_progress_can_outlive_stall_timeout() {
+        let directory = tempdir().unwrap();
+        let output = directory.path().join("long-running.mkv");
+        let (_fixture_directory, executable) =
+            fixture("out=\"\"; for arg in \"$@\"; do out=\"$arg\"; done; cat > \"$out\"");
+        let mut config = FfmpegConfig::new(&output, 1, 1, FrameRate::integer(30).unwrap());
+        config.executable = executable;
+        config.queue_capacity = 1;
+        config.max_queue_bytes = 4;
+        config.stall_timeout = Duration::from_millis(50);
+        let mut sink = FfmpegSink::spawn(config).unwrap();
+
+        sink.push(0, &[1, 2, 3, 4]).unwrap();
+        thread::sleep(Duration::from_millis(125));
+        sink.push(1, &[5, 6, 7, 8]).unwrap();
+
+        let report = sink.finish().unwrap();
+        assert_eq!(report.frames, 2);
+        assert_eq!(fs::read(&output).unwrap(), [1, 2, 3, 4, 5, 6, 7, 8]);
     }
 
     #[cfg(unix)]
@@ -1399,7 +1419,7 @@ mod tests {
         config.queue_capacity = 1;
         config.max_queue_bytes = 4;
         config.max_stderr_bytes = STDERR_CAP;
-        config.timeout = Duration::from_secs(2);
+        config.stall_timeout = Duration::from_secs(2);
         let mut sink = FfmpegSink::spawn(config).unwrap();
         let frame = [1, 2, 3, 4];
         sink.push(0, &frame).unwrap();
@@ -1439,7 +1459,7 @@ mod tests {
         config.executable = executable;
         config.queue_capacity = 1;
         config.max_queue_bytes = 4;
-        config.timeout = Duration::from_millis(50);
+        config.stall_timeout = Duration::from_millis(50);
         let mut sink = FfmpegSink::spawn(config).unwrap();
         sink.push(0, &[1, 2, 3, 4]).unwrap();
         assert!(matches!(sink.finish(), Err(SinkError::Timeout { .. })));
@@ -1456,7 +1476,7 @@ mod tests {
         config.executable = executable;
         config.queue_capacity = 1;
         config.max_queue_bytes = 4;
-        config.timeout = Duration::from_secs(2);
+        config.stall_timeout = Duration::from_secs(2);
         let mut sink = FfmpegSink::spawn(config).unwrap();
         sink.push(0, &[1, 2, 3, 4]).unwrap();
         sink.cancel();

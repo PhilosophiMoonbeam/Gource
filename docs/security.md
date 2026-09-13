@@ -197,13 +197,16 @@ video input, configured dimensions and exact reduced frame rate, FFV1 level 3,
 `-g 1`, configured colour metadata, and Matroska output. Stdout is discarded;
 stderr is drained concurrently into a 64 KiB tail. The frame queue is bounded
 to three tight packets and a matching byte cap. A full queue applies
-backpressure rather than dropping frames or allocating without bound.
+backpressure rather than dropping frames or allocating without bound. The
+30-second stall timeout bounds a continuously full queue and final encoder
+shutdown; it does not bound total rendering time.
 
 FFmpeg is trusted native code with the caller's OS privileges; direct argv
 handling prevents shell injection but is not a sandbox. A missing executable
 is a spawn error. Non-zero exit, writer failure, queue disconnect, I/O error,
-timeout, or cancellation kills and waits for the child, joins worker threads,
-and removes the private staging file. FFmpeg is not bundled, downloaded, or
+stall timeout, or cancellation kills and waits for the child, joins worker
+threads, and removes the private staging file. FFmpeg is not bundled,
+downloaded, or
 claimed to have a particular license configuration; users must audit the
 executable they choose.
 

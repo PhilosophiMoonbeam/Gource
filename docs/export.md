@@ -177,18 +177,21 @@ no shell command is assembled. The default CLI configuration requests:
 
 FFmpeg is external and is not bundled or downloaded. The default queue holds
 three tight frame packets with a matching byte cap, stderr is drained into a
-64 KiB tail, and the deadline is 30 seconds. The producer waits when the queue
-is full and checks cancellation, deadline, writer state, and child status; it
-does not drop frames or grow without bound.
+64 KiB tail, and the stall timeout is 30 seconds. Total render duration is not
+limited. The producer starts the timeout only while a full queue prevents a
+pending frame from being accepted; each accepted frame ends that backpressure
+interval. It checks cancellation, writer state, and child status while waiting,
+and it does not drop frames or grow without bound.
 
-The encoder writes a private staging file. It is renamed to the requested final
-path only after all frame packets are accepted, the writer completes, FFmpeg
-exits successfully, the deadline is not exceeded, and cancellation is clear.
-Non-zero exit, spawn/I/O failure, writer failure, queue disconnect, timeout,
-or cancellation kills and reaps the child, joins worker threads, and removes
-the staging file. A video manifest is written atomically beside the final
-output with the final extension replaced by `.manifest.toml`; a manifest
-failure removes the just-published video.
+The encoder writes a private staging file. After the producer closes stdin, a
+fresh stall timeout bounds draining the accepted queue, closing the writer,
+encoder exit, and stderr EOF. The file is renamed to the requested final path
+only after the writer completes, FFmpeg exits successfully, and cancellation
+is clear. Non-zero exit, spawn/I/O failure, writer failure, queue disconnect,
+stall timeout, or cancellation kills and reaps the child, joins worker threads,
+and removes the staging file. A video manifest is written atomically beside
+the final output with the final extension replaced by `.manifest.toml`; a
+manifest failure removes the just-published video.
 
 The direct argument boundary prevents shell injection but does not sandbox a
 custom executable supplied by an API caller. A missing `ffmpeg` on `PATH` is a

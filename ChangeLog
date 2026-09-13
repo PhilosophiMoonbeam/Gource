@@ -14,6 +14,8 @@
    self-repository diagnostics, cache miss/hit validation, reference PNG
    export, complete selected-repository FFV1 video, native packaging, retained
    evidence artifacts, and optional interactive launch.
+ * Fixed video exports incorrectly treating the 30-second encoder stall guard
+   as a total render deadline, which killed progressing full-history exports.
 
 0.57:
  * Handle loading indexed colour images (sokripon).
