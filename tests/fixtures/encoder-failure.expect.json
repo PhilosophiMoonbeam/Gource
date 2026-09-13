@@ -1,0 +1,26 @@
+{
+  "manifest_version": 1,
+  "fixture": "encoder-failure.log",
+  "category": "encoder_failure",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "expected": {
+    "accepted_lines": [1, 2, 3],
+    "normalized_order": [1, 2, 3],
+    "inject_error_after_frame": 1,
+    "error_kind": "encoder_write_failed",
+    "required_cleanup": ["stop_encoder", "release_staging_buffers", "report_error"],
+    "hierarchy": {
+      "root": "/",
+      "directories": ["/frames"],
+      "active_files": ["/frames/one.rs", "/frames/two.rs"],
+      "deleted_files": []
+    },
+    "contributors": ["alice", "bob"],
+    "actions": {"A": 2, "M": 1, "D": 0}
+  }
+}

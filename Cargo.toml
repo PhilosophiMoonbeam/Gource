@@ -1,0 +1,57 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/gource-core",
+    "crates/gource-ingest",
+    "crates/gource-sim",
+    "crates/gource-render",
+    "crates/gource-export",
+    "crates/gource-app",
+]
+default-members = [
+    "crates/gource-core",
+    "crates/gource-ingest",
+    "crates/gource-sim",
+    "crates/gource-render",
+    "crates/gource-export",
+    "crates/gource-app",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98.1"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/acaudwell/Gource"
+homepage = "https://gource.io"
+
+[workspace.dependencies]
+# Local crates are inherited by every member so the dependency graph stays explicit.
+gource-core = { path = "crates/gource-core", version = "0.1.0" }
+gource-ingest = { path = "crates/gource-ingest", version = "0.1.0" }
+gource-sim = { path = "crates/gource-sim", version = "0.1.0" }
+gource-render = { path = "crates/gource-render", version = "0.1.0" }
+gource-export = { path = "crates/gource-export", version = "0.1.0" }
+gource-app = { path = "crates/gource-app", version = "0.1.0" }
+
+# Keep one graphics family across the native renderer, export path, and app UI.
+egui = { version = "=0.36.2", default-features = false, features = ["default_fonts"] }
+egui-winit = { version = "=0.36.2", default-features = false, features = ["clipboard", "wayland", "x11"] }
+egui-wgpu = { version = "=0.36.2", default-features = false }
+epaint = { version = "=0.36.2", default-features = false, features = ["default_fonts", "bytemuck"] }
+wgpu = { version = "=30.0.1", default-features = false, features = ["std", "parking_lot", "wgsl", "vulkan", "metal", "dx12"] }
+winit = { version = "=0.30.13", default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen", "wayland-csd-adwaita"] }
+
+# Shared non-graphics dependencies are exact-pinned for reproducible resolution.
+serde = { version = "=1.0.229", features = ["derive"] }
+clap = { version = "=4.6.6", features = ["derive"] }
+tracing = "=0.1.44"
+rayon = "=1.12.0"
+crossbeam-channel = "=0.5.17"
+image = { version = "=0.25.10", default-features = false, features = ["png"] }
+thiserror = "=2.0.20"
+bytemuck = { version = "=1.25.2", features = ["derive"] }
+pollster = "=1.0.1"
+tempfile = "=3.27.0"
+blake3 = { version = "=1.8.7", features = ["pure"] }
+toml = { version = "=1.1.6", default-features = false, features = ["std", "parse", "display", "serde"] }

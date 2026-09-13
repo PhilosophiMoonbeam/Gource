@@ -1,0 +1,66 @@
+{
+  "manifest_version": 1,
+  "format": "timestamp|contributor|action|path[|#rrggbb]",
+  "purpose": "Stage-one custom-log references for parsing, normalization, hierarchy, playback, and export scenarios.",
+  "normalization_contract": {
+    "sort_key": ["timestamp_ascending", "source_sequence_ascending"],
+    "equal_timestamps": "stable_source_order",
+    "duplicates": "retain_source_events",
+    "timestamps": "signed_integer_no_clamping",
+    "paths": "rooted_hierarchy_components",
+    "actions": {"A": "add", "M": "modify", "D": "delete"},
+    "contributors": "first_seen_order"
+  },
+  "status_vocabulary": {
+    "inspected": "behavior or evidence read from the existing application and fixtures",
+    "planned": "stage-one Rust support contract, not an implementation claim",
+    "intentional": "successor behavior chosen explicitly when normalization differs from source order",
+    "deferred": "outside this fixture slice and not silently assumed supported",
+    "unsupported": "input or option is rejected with a named error",
+    "verified": "only set after an executable check has observed the outcome",
+    "not-run": "no executable check is claimed by this catalog"
+  },
+  "fixtures": [
+    {"category": "empty_history", "log": "empty.log", "expectation": "empty.expect.json"},
+    {"category": "single_event", "log": "single-event.log", "expectation": "single-event.expect.json"},
+    {"category": "equal_timestamps_source_order", "log": "equal-timestamps-source-order.log", "expectation": "equal-timestamps-source-order.expect.json"},
+    {"category": "duplicate_events", "log": "duplicates.log", "expectation": "duplicates.expect.json"},
+    {"category": "unordered_timestamps", "log": "unordered-timestamps.log", "expectation": "unordered-timestamps.expect.json"},
+    {"category": "zero_and_negative_timestamps", "log": "zero-negative-timestamps.log", "expectation": "zero-negative-timestamps.expect.json"},
+    {"category": "long_idle_period", "log": "long-idle.log", "expectation": "long-idle.expect.json"},
+    {"category": "deletion_and_recreation", "log": "deletion-recreation.log", "expectation": "deletion-recreation.expect.json"},
+    {"category": "deep_hierarchy_unicode_unusual_paths", "log": "deep-unicode-unusual.log", "expectation": "deep-unicode-unusual.expect.json"},
+    {"category": "dense_contributors_activity", "log": "dense-contributors.log", "expectation": "dense-contributors.expect.json"},
+    {"category": "malformed_records", "log": "malformed-records.log", "expectation": "malformed-records.expect.json"},
+    {"category": "recognizable_visual_hierarchy_activity", "log": "visual-hierarchy-activity.log", "expectation": "visual-hierarchy-activity.expect.json"},
+    {"category": "cancellation", "log": "cancellation.log", "expectation": "cancellation.expect.json"},
+    {"category": "encoder_failure", "log": "encoder-failure.log", "expectation": "encoder-failure.expect.json"}
+  ],
+  "legacy_references": [
+    {
+      "path": "tests/logs/file-removal.log",
+      "covered_by": "deletion-recreation.expect.json",
+      "reason": "retain the established bulk-deletion behavior without copying the log"
+    },
+    {
+      "path": "tests/logs/file-to-dir.log",
+      "covered_by": "visual-hierarchy-activity.expect.json",
+      "reason": "retain the established file-to-directory hierarchy transition as a reference"
+    },
+    {
+      "path": "tests/logs/custom-dir-delete.log",
+      "covered_by": "deletion-recreation.expect.json",
+      "reason": "retain explicit directory-delete compatibility evidence without duplicating it"
+    },
+    {
+      "path": "tests/logs/utf8.log",
+      "covered_by": "deep-unicode-unusual.expect.json",
+      "reason": "retain existing UTF-8 contributor and path evidence"
+    }
+  ],
+  "benchmark_generator": {
+    "config": "../benchmarks/fixtures/large_history.config.json",
+    "expectation": "../benchmarks/fixtures/large_history.expect.json",
+    "policy": "generate_on_demand_do_not_commit_output_blob"
+  }
+}

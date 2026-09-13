@@ -1,0 +1,12 @@
+1700000700|alice|A|src/a.rs
+1700000700|bob|A|src/b.rs
+1700000700|carol|A|src/c.rs
+1700000701|dave|A|src/d.rs
+1700000701|erin|A|src/e.rs
+1700000701|frank|A|src/f.rs
+1700000702|alice|M|src/a.rs
+1700000702|bob|M|src/b.rs
+1700000702|carol|M|src/c.rs
+1700000703|dave|D|src/d.rs
+1700000703|erin|M|src/e.rs
+1700000703|frank|D|src/f.rs

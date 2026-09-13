@@ -1,0 +1,24 @@
+{
+  "manifest_version": 1,
+  "fixture": "equal-timestamps-source-order.log",
+  "category": "equal_timestamps_source_order",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "expected": {
+    "accepted_lines": [1, 2, 3, 4, 5],
+    "normalized_order": [1, 2, 3, 4, 5],
+    "equal_timestamp_policy": "stable_source_order",
+    "hierarchy": {
+      "root": "/",
+      "directories": ["/src", "/docs"],
+      "active_files": ["/src/zeta.rs", "/docs/index.md"],
+      "deleted_files": ["/src/alpha.rs"]
+    },
+    "contributors": ["zeta", "alpha"],
+    "actions": {"A": 3, "M": 1, "D": 1}
+  }
+}

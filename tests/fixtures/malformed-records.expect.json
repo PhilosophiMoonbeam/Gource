@@ -1,0 +1,24 @@
+{
+  "manifest_version": 1,
+  "fixture": "malformed-records.log",
+  "category": "malformed_records",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "unsupported_records": "unsupported",
+    "verification": "not-run"
+  },
+  "expected": {
+    "accepted_lines": [1],
+    "normalized_order": [],
+    "rejected_lines": {
+      "2": "invalid_timestamp"
+    },
+    "error": {
+      "line": 2,
+      "code": "invalid-timestamp"
+    },
+    "published_prefix": []
+  }
+}

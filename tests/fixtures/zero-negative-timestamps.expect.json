@@ -1,0 +1,24 @@
+{
+  "manifest_version": 1,
+  "fixture": "zero-negative-timestamps.log",
+  "category": "zero_and_negative_timestamps",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "expected": {
+    "accepted_lines": [1, 2, 3, 4, 5],
+    "normalized_order": [2, 3, 1, 4, 5],
+    "timestamp_policy": "signed_integer_no_clamping",
+    "hierarchy": {
+      "root": "/",
+      "directories": ["/negative", "/positive"],
+      "active_files": ["/negative/two.txt", "/positive.txt"],
+      "deleted_files": ["/zero.txt"]
+    },
+    "contributors": ["zero", "negative", "positive"],
+    "actions": {"A": 3, "M": 1, "D": 1}
+  }
+}

@@ -1,0 +1,17 @@
+[package]
+name = "gource-render"
+description = "Native wgpu scene resources and rendering into supplied texture views"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+
+[dependencies]
+gource-core = { workspace = true }
+gource-sim = { workspace = true }
+bytemuck = { workspace = true }
+thiserror = { workspace = true }
+wgpu = { workspace = true, features = ["noop"] }

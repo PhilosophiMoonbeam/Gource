@@ -1,0 +1,10 @@
+1700000800|valid|A|ok/file.rs
+not-a-timestamp|alice|A|src/main.rs
+1700000801|alice|X|src/unsupported.action
+1700000802|alice|A|
+1700000803|alice|A|src/has|delimiter.rs
+1700000804||A|src/default-user.rs
+1700000805|alice|A|src/file.rs|#12345
+1700000806|alice||src/default-action.rs
+|alice|A|src/no-timestamp.rs
+1700000807|alice|A|src/file.rs|12345

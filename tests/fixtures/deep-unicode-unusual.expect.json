@@ -1,0 +1,36 @@
+{
+  "manifest_version": 1,
+  "fixture": "deep-unicode-unusual.log",
+  "category": "deep_hierarchy_unicode_unusual_paths",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "legacy_reference": "tests/logs/utf8.log",
+  "expected": {
+    "accepted_lines": [1, 2, 3, 4, 5],
+    "normalized_order": [1, 2, 3, 4, 5],
+    "path_policy": "preserve_utf8_and_non_delimiter_characters",
+    "hierarchy": {
+      "root": "/",
+      "directories": [
+        "/src",
+        "/src/深い",
+        "/src/深い/階層",
+        "/src/深い/階層/данные",
+        "/src/深い/階層/данные/مرحبا",
+        "/assets",
+        "/assets/emoji-🌲"
+      ],
+      "active_files": [
+        "/src/深い/階層/данные/مرحبا/文件.txt",
+        "/src/深い/階層/данные/مرحبا/space name [v1] @.md"
+      ],
+      "deleted_files": ["/assets/emoji-🌲/café+tea.txt"]
+    },
+    "contributors": ["Zoë", "Miyuki"],
+    "actions": {"A": 3, "M": 1, "D": 1}
+  }
+}

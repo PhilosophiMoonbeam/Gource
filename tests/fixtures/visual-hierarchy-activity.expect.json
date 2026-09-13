@@ -1,0 +1,48 @@
+{
+  "manifest_version": 1,
+  "fixture": "visual-hierarchy-activity.log",
+  "category": "recognizable_visual_hierarchy_activity",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "expected": {
+    "accepted_lines": [1, 2, 3, 4, 5, 6, 7, 8],
+    "normalized_order": [1, 2, 3, 4, 5, 6, 7, 8],
+    "idle_gaps": [
+      {"from_timestamp": 1700001003, "to_timestamp": 1700001063, "seconds": 60}
+    ],
+    "visual_requirements": {
+      "nodes": true,
+      "branches": true,
+      "contributors": true,
+      "add": true,
+      "modify": true,
+      "delete": true,
+      "idle_gap_seconds": 60
+    },
+    "hierarchy": {
+      "root": "/",
+      "directories": [
+        "/src",
+        "/src/lib",
+        "/tests",
+        "/tests/unit",
+        "/docs",
+        "/tools",
+        "/tools/bench"
+      ],
+      "active_files": [
+        "/src/main.rs",
+        "/tests/unit/parser_test.rs",
+        "/docs/README.md",
+        "/tools/bench/driver.rs"
+      ],
+      "deleted_files": ["/src/lib/parser.rs"]
+    },
+    "contributors": ["Ada Lovelace", "Grace Hopper", "Linus Torvalds"],
+    "actions": {"A": 5, "M": 2, "D": 1}
+  }
+}

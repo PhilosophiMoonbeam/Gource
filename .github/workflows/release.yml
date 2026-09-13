@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+# Build jobs only read the checkout.  The publishing job below grants write
+# access narrowly and only for tag-triggered runs.
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  package:
+    name: package (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            shell: bash
+            command: bash packaging/linux-x86_64.sh --output-dir dist
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            shell: pwsh
+            command: .\packaging\windows-x86_64.ps1 -OutputDirectory dist
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            shell: bash
+            command: bash packaging/macos.sh --target x86_64-apple-darwin --output-dir dist
+          - os: macos-14
+            target: aarch64-apple-darwin
+            shell: bash
+            command: bash packaging/macos.sh --target aarch64-apple-darwin --output-dir dist
+    permissions:
+      contents: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+
+      - name: Install pinned Rust toolchain
+        shell: ${{ matrix.shell }}
+        run: rustup toolchain install 1.98.1 --profile minimal --no-self-update
+
+      - name: Build, smoke test, and package
+        shell: ${{ matrix.shell }}
+        run: ${{ matrix.command }}
+
+      - name: Upload packaged archive and checksum
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gource-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: publish release assets
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download packaged archives
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --generate-notes
+          fi
+          gh release upload "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            release-assets/* \
+            --clobber

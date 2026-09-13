@@ -1,0 +1,28 @@
+{
+  "manifest_version": 1,
+  "fixture": "duplicates.log",
+  "category": "duplicate_events",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "expected": {
+    "accepted_lines": [1, 2, 3, 4, 5],
+    "normalized_order": [1, 2, 3, 4, 5],
+    "duplicate_policy": "retain_source_events",
+    "duplicates": [
+      {"lines": [1, 2, 3], "event": "1700000200|alice|A|/src/a.rs"},
+      {"lines": [4, 5], "event": "1700000201|bob|M|/src/a.rs"}
+    ],
+    "hierarchy": {
+      "root": "/",
+      "directories": ["/src"],
+      "active_files": ["/src/a.rs"],
+      "deleted_files": []
+    },
+    "contributors": ["alice", "bob"],
+    "actions": {"A": 3, "M": 2, "D": 0}
+  }
+}

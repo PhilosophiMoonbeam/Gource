@@ -1,0 +1,24 @@
+{
+  "manifest_version": 1,
+  "fixture": "dense-contributors.log",
+  "category": "dense_contributors_activity",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "expected": {
+    "accepted_lines": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "normalized_order": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "contributor_count": 6,
+    "hierarchy": {
+      "root": "/",
+      "directories": ["/src"],
+      "active_files": ["/src/a.rs", "/src/b.rs", "/src/c.rs", "/src/e.rs"],
+      "deleted_files": ["/src/d.rs", "/src/f.rs"]
+    },
+    "contributors": ["alice", "bob", "carol", "dave", "erin", "frank"],
+    "actions": {"A": 6, "M": 4, "D": 2}
+  }
+}

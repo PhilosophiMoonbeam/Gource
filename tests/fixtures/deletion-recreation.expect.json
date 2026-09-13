@@ -1,0 +1,26 @@
+{
+  "manifest_version": 1,
+  "fixture": "deletion-recreation.log",
+  "category": "deletion_and_recreation",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "legacy_reference": "tests/logs/file-removal.log",
+  "expected": {
+    "accepted_lines": [1, 2, 3, 4],
+    "normalized_order": [1, 2, 3, 4],
+    "path_lifecycle": ["created", "deleted", "recreated", "modified"],
+    "hierarchy": {
+      "root": "/",
+      "directories": ["/src"],
+      "active_files": ["/src/config.toml"],
+      "deleted_files": [],
+      "ever_deleted_files": ["/src/config.toml"]
+    },
+    "contributors": ["alice", "bob"],
+    "actions": {"A": 2, "M": 1, "D": 1}
+  }
+}

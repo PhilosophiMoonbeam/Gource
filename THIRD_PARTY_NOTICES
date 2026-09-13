@@ -1,0 +1,136 @@
+Gource Third-Party Notices
+===========================
+
+This file is a notice index for the preserved C++ application and the planned
+Rust successor. It does not replace source-file notices or COPYING. Entries
+marked PLANNED or UNRESOLVED are release work, not a statement that a binary
+has been cleared for distribution.
+
+1. Gource project code
+----------------------
+
+The Gource C++ application and the Rust successor's derivative/translated
+implementation are released under the GNU General Public License, version 3
+or (at your option) any later version. See COPYING at the repository root.
+
+C++ source files under src/ carry copyright and GPL notices. Preserve those
+notices, including contributor notices in format adapters. Rust modules that
+translate or adapt Gource code must carry the repository SPDX convention for
+GPL-3.0-or-later, applicable copyright attribution, and a modification notice.
+The source package must include all corresponding source and build/release
+scripts.
+
+2. TinyXML (bundled in the legacy C++ build)
+---------------------------------------------
+
+The files under src/tinyxml/ contain TinyXML source. The notice in those files
+reads:
+
+  www.sourceforge.net/projects/tinyxml
+
+  This software is provided 'as-is', without any express or implied
+  warranty. In no event will the authors be held liable for any
+  damages arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any
+  purpose, including commercial applications, and to alter and
+  redistribute it freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must
+  not claim that you wrote the original software. If you use this
+  software in a product, an acknowledgment in the product documentation
+  would be appreciated but is not required.
+
+  2. Altered source versions must be plainly marked as such, and
+  must not be misrepresented as being the original software.
+
+  3. This notice may not be removed or altered from any source
+  distribution.
+
+Some files identify original code by Lee Thomason (www.grinninglizard.com),
+including the 2.0-and-earlier copyright range in tinyxmlerror.cpp. The source
+headers remain authoritative and must not be shortened or removed.
+
+3. GNU FreeFont / FreeSans (present legacy asset; successor bundling blocked)
+-------------------------------------------------------------------------------
+
+The file data/fonts/README identifies GNU FreeFont and states that the fonts
+are free software under the GNU GPL, version 3 or any later version, with a
+special exception for documents embedding an unaltered font or unaltered
+portions of it. It also states that FontForge .sfd files are the preferred
+source for modification.
+
+The repository contains data/fonts/FreeSans.ttf and that README but no .sfd
+preferred source or documented source offer. This is an UNRESOLVED preferred-
+source gap. It blocks bundling FreeSans.ttf in a new Rust/native release, not
+development: development may use a system FreeSans or a separately supplied
+font. Do not download the font at runtime. If FreeSans is later bundled, ship
+its exact preferred source (or compliant source offer), README/license text,
+and this notice together.
+
+4. Planned Rust crate dependencies (license audit pending lockfile)
+---------------------------------------------------------------------
+
+The workspace currently plans these exact direct package versions. The package
+license expressions below are the expected upstream metadata. The committed
+Cargo.lock and all enabled transitive packages must be audited before a
+release; this list is PLANNED, not VERIFIED.
+
+  egui              0.36.2          MIT OR Apache-2.0
+  egui-winit        0.36.2          MIT OR Apache-2.0
+  egui-wgpu         0.36.2          MIT OR Apache-2.0
+  epaint            0.36.2          MIT OR Apache-2.0
+  wgpu              30.0.1          MIT OR Apache-2.0
+  winit              0.30.13        MIT OR Apache-2.0
+  serde              1.0.229        MIT OR Apache-2.0
+  clap               4.6.6          MIT OR Apache-2.0
+  tracing            0.1.44         MIT OR Apache-2.0
+  rayon              1.12.0         MIT OR Apache-2.0
+  crossbeam-channel  0.5.17         MIT OR Apache-2.0
+  image              0.25.10        MIT OR Apache-2.0
+  thiserror          2.0.20         MIT OR Apache-2.0
+  bytemuck           1.25.2         Zlib OR Apache-2.0 OR MIT
+  pollster           1.0.1          Apache-2.0 OR MIT
+  tempfile           3.27.0         MIT OR Apache-2.0
+  blake3             1.8.7          CC0-1.0 OR Apache-2.0
+  toml               1.1.6+spec-1.1.0 MIT OR Apache-2.0
+
+At release time, preserve the actual license texts required by the selected
+package licenses and include a generated inventory for every enabled direct
+and transitive crate. Do not call this list complete until Cargo.lock exists.
+No asynchronous runtime is planned.
+
+5. External tools: FFmpeg and Git
+----------------------------------
+
+FFmpeg is planned as an external process for video encoding. Git is planned as
+an external process/input source after custom-log ingestion. Neither binary is
+bundled by this repository at this stage, and neither may be downloaded at
+runtime. The user's FFmpeg build may be LGPL- or GPL-configured; a future
+bundle would require auditing that exact build, its notices, and its
+corresponding source. Git's own license applies to a Git binary if one is ever
+bundled; invoking an external Git does not make it a project dependency.
+
+Missing FFmpeg or Git must produce an actionable error or an explicitly
+unsupported/deferred feature. Release archives must document the external
+requirement without implying that the project distributes either binary.
+
+6. Core submodule (UNRESOLVED in this checkout)
+------------------------------------------------
+
+.gitmodules identifies src/core as https://github.com/acaudwell/Core.git at the
+recorded gitlink d8d880fd58fda37b9d8fb59844a3c2a712969948. The submodule work
+tree is not populated in the audited checkout, so its license and notices have
+not been inspected. Before distributing a build that includes Core, inspect
+the pinned revision and include its source/notices or a compliant corresponding-
+source offer. Do not infer the submodule's terms from the parent GPL notice.
+
+7. Asset provenance review
+---------------------------
+
+The sprite PNGs, bloom TGA files, GLSL shaders, style file, and XCF source
+files are indexed in docs/assets.md. Several have repository-history leads but
+no standalone asset license or artist permission record. They remain
+UNRESOLVED for successor bundling until that provenance is confirmed or the
+asset is replaced intentionally. The release must retain source forms and
+notices for any asset that is actually shipped.

@@ -1,0 +1,28 @@
+{
+  "manifest_version": 1,
+  "fixture": "cancellation.log",
+  "category": "cancellation",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "expected": {
+    "accepted_lines": [1, 2, 3],
+    "normalized_order": [1, 2, 3],
+    "cancel_after_source_sequence": 2,
+    "applied_before_cancel": [1, 2],
+    "not_applied_after_cancel": [3],
+    "hierarchy": {
+      "root": "/",
+      "directories": ["/src"],
+      "active_files": ["/src/before-cancel.rs", "/src/cancel-point.rs"],
+      "deleted_files": []
+    },
+    "contributors": ["alice", "bob", "carol"],
+    "applied_contributors": ["alice", "bob"],
+    "actions": {"A": 3, "M": 0, "D": 0},
+    "applied_actions": {"A": 2, "M": 0, "D": 0}
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "manifest_version": 1,
+  "generator": "generate_large_history.py",
+  "seed": 424242,
+  "start_timestamp": 1700010000,
+  "contributor_count": 32,
+  "top_level_directories": ["src", "tests", "docs", "tools", "examples", "assets"],
+  "files_per_directory": 64,
+  "same_timestamp_probability": 0.35,
+  "timestamp_step_max_seconds": 3,
+  "idle_gap_every_events": 256,
+  "idle_gap_seconds": 7200,
+  "phases": [
+    {"name": "low_visible_object_count", "events": 256, "visible_files": 8},
+    {"name": "high_visible_object_count", "events": 1024, "visible_files": 128},
+    {"name": "low_visible_object_count_tail", "events": 256, "visible_files": 16}
+  ]
+}

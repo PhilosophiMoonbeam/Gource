@@ -1,0 +1,8 @@
+1700001000|Ada Lovelace|A|src/main.rs
+1700001000|Grace Hopper|A|src/lib/parser.rs
+1700001001|Ada Lovelace|M|src/main.rs
+1700001002|Linus Torvalds|A|tests/unit/parser_test.rs
+1700001003|Grace Hopper|D|src/lib/parser.rs
+1700001063|Ada Lovelace|A|docs/README.md
+1700001063|Linus Torvalds|M|src/main.rs
+1700001064|Linus Torvalds|A|tools/bench/driver.rs

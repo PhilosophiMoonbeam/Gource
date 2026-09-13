@@ -1,0 +1,23 @@
+{
+  "manifest_version": 1,
+  "fixture": "empty.log",
+  "category": "empty_history",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "expected": {
+    "accepted_lines": [],
+    "normalized_order": [],
+    "hierarchy": {
+      "root": "/",
+      "directories": [],
+      "active_files": [],
+      "deleted_files": []
+    },
+    "contributors": [],
+    "actions": {"A": 0, "M": 0, "D": 0}
+  }
+}

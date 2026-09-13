@@ -25,5 +25,20 @@ logs/*
 .deps
 .dirstamp
 
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Rust build outputs
+/target/
+**/target/
+
+# Rust export scratch and generated frame outputs
+/export-tmp/
+**/export-tmp/
+/gource-export-tmp/
+**/gource-export-tmp/
+*.gource-export/
+
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/

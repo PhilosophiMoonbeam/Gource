@@ -1,3 +1,16 @@
+0.1.0 (Rust native successor):
+ * Added the six-crate Rust workspace, pinned to Rust 1.98.1, with native
+   `wgpu`/`winit`/`egui` rendering and the preserved C++ application retained.
+ * Added the `view`, `export`, and `diagnose` subcommands with bounded finite
+   custom-log ingestion, deterministic replay, PNG frame output, and FFV1
+   Matroska output through an external FFmpeg process.
+ * Added local Git-directory ingestion through a fixed-argument, bounded child
+   process and an opt-in private, checksummed, quota-bounded history cache.
+ * Added target-qualified native packaging scripts with archive verification,
+   packaged `--help`/`diagnose` smoke checks, and SHA-256 sidecars.
+ * Documented the current CLI, cache privacy and limits, FFmpeg process
+   boundary, native evidence limits, and the measured replay diagnostic.
+
 0.57:
  * Handle loading indexed colour images (sokripon).
 

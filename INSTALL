@@ -1,16 +1,184 @@
-This file is to help you configure, build and install Gource for your system.
+Gource build and installation guide
+===================================
 
-Contents
-========
+This repository contains two native programs:
 
-1. Dependencies
-2. Building
-3. Configure Options
+* the Rust successor, built as the `gource-app` Cargo package; and
+* the preserved C++ application, built with the existing autotools/qmake
+  files.
 
-1. Dependencies
-===============
+The Rust instructions are first. The legacy C++ instructions remain below so
+that the original application and its established dependencies are still
+available.
 
-Gource requires the following libraries to compile (package names may vary):
+Rust native successor
+---------------------
+
+Requirements
+~~~~~~~~~~~~
+
+The successor is pinned to Rust **1.98.1** in `rust-toolchain.toml`.
+`rustup` and Cargo are the supported way to install and use that toolchain:
+
+    rustup toolchain install 1.98.1 --profile minimal --no-self-update
+
+A native `wgpu` adapter and driver are required for an interactive `view` and
+for every non-empty frame export. The successor uses native `wgpu` backends
+through `winit`; a successful legacy OpenGL run is not evidence for the Rust
+renderer on another host.
+
+The optional external tools are:
+
+* `git`, when `--input` names a local repository directory;
+* `ffmpeg`, when `export --video` is selected; and
+* Python 3 for the archive helper used by the packaging scripts.
+
+Git and FFmpeg are never downloaded or bundled by the application. No runtime
+asset or network service is required. FFmpeg remains the user's executable;
+the Rust exporter starts it directly with fixed arguments, never through a
+shell, and reports a missing executable as an export error.
+
+Build
+~~~~~
+
+From the repository root:
+
+    cargo build --locked --release --package gource-app
+
+The binary is `target/release/gource-app` (or
+`target/release/gource-app.exe` on Windows). For a development build:
+
+    cargo run --locked -p gource-app -- --help
+
+The six workspace crates are `gource-core`, `gource-ingest`, `gource-sim`,
+`gource-render`, `gource-export`, and `gource-app`. The committed `Cargo.lock`
+and pinned toolchain are part of a reproducible source checkout.
+
+Run, export, and diagnose
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Rust CLI has exactly three subcommands: `view`, `export`, and `diagnose`.
+The input is supplied with `--input`; there is no positional-path or legacy
+`--log-format` mode in this CLI.
+
+Interactive view:
+
+    ./target/release/gource-app view \
+        --input tests/fixtures/visual-hierarchy-activity.log \
+        --viewport 1280x720
+
+PNG frame-directory export (FFmpeg is not required):
+
+    ./target/release/gource-app export \
+        --input tests/fixtures/single-event.log \
+        --output /tmp/gource-frames \
+        --viewport 320x180 \
+        --frame-rate 60 \
+        --start 0 --end 1
+
+FFV1/Matroska export through a user-provided `ffmpeg` on `PATH`:
+
+    ./target/release/gource-app export \
+        --input tests/fixtures/single-event.log \
+        --output /tmp/gource.mkv --video \
+        --frame-rate 60 --start 0 --end 1
+
+Replay diagnostic (no window or GPU context):
+
+    ./target/release/gource-app diagnose \
+        --input tests/fixtures/single-event.log --threads 1
+
+`diagnose` emits JSON containing ingest, serial replay, and bounded-parallel
+replay timings plus `snapshots_equal`; it exits successfully only when the two
+final snapshots compare equal. Use `--threads COUNT` to select the bounded
+Rayon worker count and `--end SECONDS` (alias `--target`) to stop both runs at
+a repository timestamp. The timings exclude immutable-history cloning and do
+not constitute an end-to-end export benchmark.
+
+Input and limits
+~~~~~~~~~~~~~~~~
+
+`--input` accepts one of:
+
+* a regular strict custom-log file;
+* `-`, meaning finite stdin consumed through EOF; or
+* a local directory, which selects the safe built-in Git adapter.
+
+The custom format is
+`timestamp|contributor|A|path[|#rrggbb]`. Records are validated, globally
+sorted by timestamp and source sequence, and indexed before any history is
+published. Input, record, path, contributor, path-depth, event-count, working
+memory, temporary-sort disk, and merge fan-in limits are finite and configurable
+with the `--max-*`, `--working-*`, and `--run-fan-in` options. A limit failure
+never becomes EOF or a silently shortened history.
+
+A directory input is local-only Git ingestion. The adapter validates the
+selected directory, snapshots one revision, invokes `git` with explicit
+arguments, disables pagers and optional conversion/fetch behavior, bounds
+stdout/stderr and working state, and reaps the child on timeout or
+cancellation. It does not fetch, contact a remote, execute shell text, or
+publish a prefix. A non-repository directory or missing Git executable fails
+clearly.
+
+Persistent history caching is opt-in:
+
+    ./target/release/gource-app view \
+        --input /tmp/history.log \
+        --cache-dir /tmp/private-gource-cache \
+        --cache-bytes 1073741824
+
+The application caches regular custom-log files only. Stdin and Git-directory
+inputs bypass the persistent cache. The default aggregate entry quota is 4 GiB
+when caching is enabled; `--cache-bytes` must be finite and non-zero. Cache
+roots are created owner-private and entries are checksummed, validated, and
+atomically published. See `docs/cache.md` and `docs/security.md` for the
+privacy, quota, eviction, and failure rules.
+
+Configuration
+~~~~~~~~~~~~~
+
+Select one TOML file with `--config FILE`, or set `GOURCE_CONFIG` when the
+option is absent. Precedence is built-in defaults, TOML, known `GOURCE_*`
+environment variables, then explicit command-line options. Paths remain
+relative to the process working directory. The accepted keys and command
+sections are documented in `docs/configuration.md`; old C++ `.conf`, `.cfg`,
+and `.ini` files are not silently loaded by the Rust application.
+
+Native packaging
+~~~~~~~~~~~~~~~~
+
+The target wrappers build with the pinned toolchain, run packaged `--help` and
+`diagnose` checks, validate required archive entries, and write a SHA-256
+sidecar. They do not claim interactive GPU or FFmpeg support beyond the target
+smoke evidence that has actually been recorded.
+
+Linux x86_64:
+
+    bash packaging/linux-x86_64.sh --output-dir dist
+
+macOS Intel or Apple Silicon:
+
+    bash packaging/macos.sh --target x86_64-apple-darwin --output-dir dist
+    bash packaging/macos.sh --target arm64-apple-darwin --output-dir dist
+
+Windows PowerShell:
+
+    .\packaging\windows-x86_64.ps1 -OutputDirectory dist
+
+Each archive contains `bin/gource-app`, `COPYING`,
+`THIRD_PARTY_NOTICES`, the README and man page, `data/gource.style`, the font
+notice, and the finite single-event fixture. FFmpeg, Git, the unresolved
+FreeSans binary, and uncleared legacy sprites are not bundled. See
+`docs/releasing.md` for corresponding-source and platform-evidence rules.
+
+Legacy C++ application
+----------------------
+
+Dependencies
+~~~~~~~~~~~~
+
+The preserved C++ program requires the following libraries to compile (package
+names vary by distribution):
 
     SDL 2.0 (libsdl2-dev)
     SDL Image 2.0 (libsdl2-image-dev)
@@ -23,54 +191,51 @@ Gource requires the following libraries to compile (package names may vary):
 
 Optional:
 
-   TinyXML (libtinyxml-dev)
+    TinyXML (libtinyxml-dev)
 
-SDL Image 2.0 needs to have been built with support PNG and JPEG images.
+SDL Image 2.0 must have support for PNG and JPEG images enabled.
 
-2. Building
-===========
+Building
+~~~~~~~~
 
-Gource requires a GNU compatible C++ compiler that supports c++0x features such as 'auto' and the new 'for' loop syntax.
+The legacy build requires a GNU-compatible C++ compiler with C++0x features
+such as `auto` and range-based `for` loops. GCC 4.6+ or Clang is recommended.
 
-GCC 4.6+ or Clang recommended.
-
-If you got the source directly from the Gource.git repository, you will first
-need to run autogen.sh which will generate the configure script and
-initialize and update the submodules.
+When building from a checkout of the legacy Git tree, first generate the
+configure script and initialize/update its submodules:
 
     ./autogen.sh
 
-Generic build instructions for Linux/Mac OS:
+Generic Linux/macOS autotools build:
 
     ./configure
     make
     make install
 
-Building on Windows:
+Windows legacy build:
 
-On Windows compile gource.pro with Qt Creator.
+Compile `gource.pro` with Qt Creator. A pre-built C++ version has historically
+been published from the homepage, but that is separate from the Rust
+`gource-app` package.
 
-A pre-built version for Windows is normally available from the homepage.
+The legacy program expects SDL to have been built with the
+`NO_STDIO_REDIRECT` flag.
 
-Gource expects SDL to have been built with the NO_STDIO_REDIRECT flag.
+Configure options
+~~~~~~~~~~~~~~~~~
 
-3. Configure Options
-====================
-
-By default Gource will install some GNU FreeFont TTF Fonts on your system.
-
-If you already have these fonts, you can configure Gource to use them with:
+By default the legacy program installs GNU FreeFont TTF fonts. If the fonts
+are already installed, point configure at them:
 
     ./configure --enable-ttf-font-dir=/path/to/freefont/
 
-You can also build Gource with a different font:
+A different FreeType-supported font can be selected at build time:
 
     ./configure --enable-font-file=/path/to/alternate/font.ttf
 
-The font file format must be supported by Free Type 2.
-
-Gource includes a copy of TinyXML. To build against the system version of the
-library use:
+The legacy tree includes a copy of TinyXML. To build against the system
+library:
 
     ./configure --with-tinyxml
 
+The legacy dependency list and options above do not change the Rust CLI.

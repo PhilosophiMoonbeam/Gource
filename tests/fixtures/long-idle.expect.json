@@ -1,0 +1,26 @@
+{
+  "manifest_version": 1,
+  "fixture": "long-idle.log",
+  "category": "long_idle_period",
+  "status": {
+    "evidence": "inspected",
+    "support": "planned",
+    "normalization": "intentional",
+    "verification": "not-run"
+  },
+  "expected": {
+    "accepted_lines": [1, 2, 3, 4],
+    "normalized_order": [1, 2, 3, 4],
+    "idle_gaps": [
+      {"from_timestamp": 1700000402, "to_timestamp": 1700004002, "seconds": 3600}
+    ],
+    "hierarchy": {
+      "root": "/",
+      "directories": ["/src"],
+      "active_files": ["/src/resume.rs"],
+      "deleted_files": ["/src/start.rs"]
+    },
+    "contributors": ["alice", "bob"],
+    "actions": {"A": 2, "M": 1, "D": 1}
+  }
+}

@@ -1,0 +1,57 @@
+schema = 1
+purpose = "Stable headless visual references for hierarchy and activity snapshots."
+
+[fixture]
+path = "tests/fixtures/visual-hierarchy-activity.log"
+path_base = "repository-root"
+digest_algorithm = "sha256"
+digest = "8e8373ee945f54b138d5823210aa76fe8e61369ed88a91822e8842e3154c1597"
+# The export manifest's normalized HistorySource identity is retained separately
+# from the digest of the fixture bytes.
+history_identity_algorithm = "blake3"
+history_identity = "d63fbaf31c28a6e5962df078762eb94ddd88189eb48c5a01e17d1a466e1f2756"
+
+[export]
+width = 320
+height = 180
+fps = 2
+start_seconds = 0
+end_seconds = 65
+frame_count = 130
+seconds_per_day = 86400.0
+realtime = true
+auto_skip_seconds = 3.0
+time_scale = 1.0
+camera = "overview"
+seed = 31
+
+[render]
+target_format = "Rgba8Unorm"
+sample_count = 1
+transfer = "gamma-space"
+blend = "premultiplied-one-one-minus-src-alpha"
+
+[[frames]]
+index = 4
+reference = "hierarchy-activity-early.png"
+source = "target/gource-smoke-frames-2/frame_00000004.png"
+role = "early hierarchy and activity"
+
+[[frames]]
+index = 64
+reference = "hierarchy-activity-middle.png"
+source = "target/gource-smoke-frames-2/frame_00000064.png"
+role = "middle hierarchy and activity"
+
+[[frames]]
+index = 129
+reference = "hierarchy-activity-late.png"
+source = "target/gource-smoke-frames-2/frame_00000129.png"
+role = "late hierarchy and activity"
+
+[tolerance]
+comparison = "RGBA8 pixel-wise"
+max_channel_abs_delta = 8
+max_differing_pixel_fraction = 0.02
+differing_pixel_rule = "a pixel differs when any RGBA channel exceeds max_channel_abs_delta"
+exact_image_hash = false

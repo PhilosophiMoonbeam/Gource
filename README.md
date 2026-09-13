@@ -1,490 +1,306 @@
-Gource
-======
+# Gource
 
-https://gource.io
+<https://gource.io>
 
-Description
-===========
+Gource visualizes source-control history as an animated directory tree. This
+checkout contains the preserved C++ application and a native Rust successor.
+The Rust application is the current implementation described below; the
+legacy C++ build remains available and is documented in [`INSTALL`](INSTALL).
 
-Gource is a visualization tool for source control repositories.
+## Rust native application
 
-The repository is displayed as a tree where the root of the repository is the
-centre, directories are branches and files are leaves. Contributors to the
-source code appear and disappear as they contribute to specific files and
-directories.
+The successor is a six-crate Cargo workspace:
 
-Requirements
-============
+- `gource-core` — identifiers, events, hierarchy, replay configuration;
+- `gource-ingest` — bounded custom-log and local Git ingestion, indexing, and
+  the optional history cache;
+- `gource-sim` — fixed-step playback, layout, contributors, and snapshots;
+- `gource-render` — native `wgpu` rendering and WGSL;
+- `gource-export` — deterministic frame scheduling, readback, PNG/FFmpeg sinks;
+- `gource-app` — the native window, CLI, diagnostics, and command dispatch.
 
-Gource's display is rendered using OpenGL and requires a 3D accelerated video
-card to run.
+The workspace is pinned to **Rust 1.98.1** in `rust-toolchain.toml` and uses
+`wgpu`, `winit`, and `egui`. A compatible native graphics adapter and driver
+are required for `view` and for non-empty `export`; headless means that no
+window is created, not that a GPU or graphics driver is unnecessary.
 
-Using Gource
-============
+Target wrappers are provided for Windows, macOS, and Linux. A successful build
+or a smoke run on one host does not establish support for every OS, GPU,
+driver, architecture, or backend. Target-specific evidence and the current
+packaging boundary are recorded in [`docs/releasing.md`](docs/releasing.md).
 
-```
-gource [options] [path]
+## Build
 
-options:
+Install the pinned toolchain and build the native binary:
 
-    -h, --help
-            Help ('-H' for extended help).
-
-    -WIDTHxHEIGHT, --viewport WIDTHxHEIGHT
-            Set the viewport size. If -f is also supplied, will attempt to set
-            the video mode to this also. Add ! to make the window non-resizable.
-
-    --screen SCREEN
-            Set the number of the screen to display on.
-
-    --high-dpi
-            Request a high DPI display when creating the window.
-
-            On some platforms such as MacOS, the window resolution is specified in points instead of pixels.
-            The --high-dpi flag may be required to access some higher resolutions.
-
-            E.g. requesting a high DPI 800x600 window may produce a window that is 1600x1200 pixels.
-
-    --window-position XxY
-            Initial window position on your desktop which may be made up of
-            multiple monitors.
-
-            This will override the screen setting so don't specify both.
-
-    --frameless
-            Frameless window.
-
-    -f, --fullscreen
-            Fullscreen.
-
-    -w, --windowed
-            Windowed.
-
-    --transparent
-            Make the background transparent. Only really useful for screenshots.
-
-    --start-date "YYYY-MM-DD hh:mm:ss +tz"
-            Start with the first entry after the supplied date and optional time.
-
-            If a time zone offset isn't specified the local time zone is used.
-
-            Example accepted formats:
-
-                "2012-06-30"
-                "2012-06-30 12:00"
-                "2012-06-30 12:00:00 +12"
-
-    --stop-date "YYYY-MM-DD hh:mm:ss +tz"
-            Stop after the last entry prior to the supplied date and optional time.
-
-            Uses the same format as --start-date.
-
-    -p, --start-position POSITION
-            Begin at some position in the log (between 0.0 and 1.0 or 'random').
-
-        --stop-position  POSITION
-            Stop (exit) at some position in the log (does not work with STDIN).
-
-    -t, --stop-at-time SECONDS
-            Stop (exit) after a specified number of seconds.
-
-        --stop-at-end
-            Stop (exit) at the end of the log / stream.
-
-        --loop
-            Loop back to the start of the log when the end is reached.
-
-        --loop-delay-seconds
-            Seconds to delay before looping.
-
-    -a, --auto-skip-seconds SECONDS
-            Skip to next entry if nothing happens for a number of seconds.
-
-    -s, --seconds-per-day SECONDS
-            Speed of simulation in seconds per day.
-
-        --realtime
-            Realtime playback speed.
-
-        --no-time-travel
-            Use the time of the last commit if the time of a commit is in the past.
-
-        --author-time
-            Use the timestamp of the author instead of the timestamp of the committer.
-
-    -c, --time-scale SCALE
-            Change simulation time scale. This affects the movement speed of user avatars.
-
-            E.g. 0.5 for half speed, 2 for double speed.
-
-    -i, --file-idle-time SECONDS
-            Time in seconds files remain idle before they are removed or 0
-            for no limit.
-
-        --file-idle-time-at-end SECONDS
-            Time in seconds files remain idle at the end before they are
-            removed.
-
-    -e, --elasticity FLOAT
-            Elasticity of nodes.
-
-    -b, --background-colour FFFFFF
-            Background colour in hex.
-
-    --background-image IMAGE
-            Set a background image.
-
-    --logo IMAGE
-            Logo to display in the foreground.
-
-    --logo-offset XxY
-            Offset position of the logo.
-
-    --title TITLE
-            Set a title.
-
-    --font-file FILE
-            Specify the font. Should work with most font file formats supported by FreeType, such as TTF and OTF, among others.
-
-    --font-scale SCALE
-            Scale the size of all fonts.
-
-    --font-size SIZE
-            Font size used by the date and title.
-
-    --file-font-size SIZE
-            Font size of filenames.
-
-    --dir-font-size SIZE
-            Font size of directory names
-
-    --user-font-size SIZE
-            Font size of user names.
-
-    --font-colour FFFFFF
-            Font colour used by the date and title in hex.
-
-    --key
-            Show file extension key.
-
-    --date-format FORMAT
-            Specify display date string (strftime format).
-
-    --log-command VCS
-            Show the VCS log command used by gource (git,svn,hg,bzr,cvs2cl).
-
-    --log-format VCS
-            Specify the log format (git,svn,hg,bzr,cvs2cl,custom).
-
-            Required when reading from STDIN.
-
-    --git-branch
-            Get the git log of a branch other than the current one.
-
-    --follow-user USER
-            Have the camera automatically follow a particular user.
-
-    --highlight-dirs
-            Highlight the names of all directories.
-
-    --highlight-user USER
-            Highlight the names of a particular user.
-
-    --highlight-users
-            Highlight the names of all users.
-
-    --highlight-colour FFFFFF
-            Font colour for highlighted users in hex.
-
-    --selection-colour FFFFFF
-            Font colour for selected users and files.
-
-    --filename-colour FFFFFF
-            Font colour for filenames.
-
-    --dir-colour FFFFFF
-            Font colour for directories.
-
-    --dir-name-depth DEPTH
-            Draw names of directories down to a specific depth in the tree.
-
-    --dir-name-position FLOAT
-            Position along edge of the directory name
-            (between 0.1 and 1.0, default is 0.5).
-
-    --filename-time SECONDS
-            Duration to keep filenames on screen (>= 2.0).
-
-    --file-extensions
-            Show filename extensions only.
-
-    --file-extension-fallback
-            Use filename as extension if the extension is missing or empty.
-
-    --file-filter REGEX
-            Filter out file paths matching the specified regular expression.
-
-    --file-show-filter REGEX
-            Show only file paths matching the specified regular expression.
-
-    --user-filter REGEX
-            Filter usernames matching the specified regular expression.
-
-    --user-show-filter REGEX
-            Show only usernames matching the specified regular expression.
-
-    --user-image-dir DIRECTORY
-            Directory containing .jpg or .png images of users
-            (eg "Full Name.png") to use as avatars.
-
-    --default-user-image IMAGE
-            Path of .jpg or .png to use as the default user image.
-
-    --fixed-user-size
-            Forces the size of the user image to remain fixed throughout.
-
-    --colour-images
-            Colourize user images.
-
-    --crop AXIS
-            Crop view on an axis (vertical,horizontal).
-
-    --padding FLOAT
-            Camera view padding.
-
-    --multi-sampling
-            Enable multi-sampling.
-
-    --no-vsync
-            Disable vsync.
-
-    --bloom-multiplier FLOAT
-            Adjust the amount of bloom.
-
-    --bloom-intensity FLOAT
-            Adjust the intensity of the bloom.
-
-    --max-files NUMBER
-            Set the maximum number of files or 0 for no limit.
-
-            Excess files will be discarded.
-
-    --max-file-lag SECONDS
-            Max time files of a commit can take to appear.
-
-            Use -1 for no limit.
-
-    --max-user-speed UNITS
-            Max speed users can travel per second.
-
-    --user-friction SECONDS
-            Time users take to come to a halt.
-
-    --user-scale SCALE
-            Change scale of user avatars.
-
-    --camera-mode MODE
-            Camera mode (overview,track).
-
-    --disable-auto-rotate
-            Disable automatic camera rotation.
-
-    --disable-input
-            Disable keyboard and mouse input.
-
-    --hide DISPLAY_ELEMENT
-            Hide one or more display elements from the list below:
-
-            bloom     - bloom effect
-            date      - current date
-            dirnames  - names of directories
-            files     - file icons
-            filenames - names of files
-            mouse     - mouse cursor
-            progress  - progress bar widget
-            root      - root directory of tree
-            tree      - animated tree structure
-            users     - user avatars
-            usernames - names of users
-
-            Separate multiple elements with commas (eg "mouse,progress")
-
-    --hash-seed SEED
-            Change the seed of hash function.
-
-    --caption-file FILE
-            Caption file (see Caption Log Format).
-
-    --caption-size SIZE
-            Caption size.
-
-    --caption-colour FFFFFF
-            Caption colour in hex.
-
-    --caption-duration SECONDS
-            Caption duration.
-
-    --caption-offset X
-            Caption horizontal offset (0 to centre captions).
-
-    -o, --output-ppm-stream FILE
-            Output a PPM image stream to a file ('-' for STDOUT).
-
-            This will automatically hide the progress bar initially and
-            enable 'stop-at-end' unless other behaviour is specified.
-
-    -r, --output-framerate FPS
-            Framerate of output (25,30,60). Used with --output-ppm-stream.
-
-    --output-custom-log FILE
-            Output a custom format log file ('-' for STDOUT).
-
-    --load-config CONFIG_FILE
-            Load a gource conf file.
-
-    --save-config CONFIG_FILE
-            Save a gource conf file with the current options.
-
-    --path PATH
-
-    path    Either a supported version control directory, a pre-generated log
-            file (see log commands or the custom log format), a Gource conf
-            file or '-' to read STDIN.
-
-            If path is omitted, gource will attempt to read a log from the
-            current directory.
+```sh
+rustup toolchain install 1.98.1 --profile minimal --no-self-update
+cargo build --locked --release --package gource-app
 ```
 
-Git, Bazaar, Mercurial and SVN Examples:
+The resulting binary is `target/release/gource-app` (or
+`target/release/gource-app.exe` on Windows). A development command is:
 
-View the log of the repository in the current path:
-
-```
-    gource
-```
-
-View the log of a project in the specified directory:
-
-```
-    gource my-project-dir
+```sh
+cargo run --locked -p gource-app -- --help
 ```
 
-For large projects, generating a log of the project history may take a long
-time. For centralized VCS like SVN, generating the log may also put load on
-the central VCS server.
+No command downloads fonts, images, shaders, Git data, or FFmpeg at runtime.
 
-In these cases, you may like to save a copy of the log for later use.
+Runtime prerequisites are:
 
-You can generate a log in the VCS specific log format using
-the --log-command VCS option:
+- a native `wgpu` adapter/driver for `view` and non-empty frame export;
+- a local `git` executable only when the input is a repository directory; and
+- a user-provided `ffmpeg` executable on `PATH` only when `export --video` is
+  selected.
 
-```
-    cd my-svn-project
-    `gource --log-command svn` > my-svn-project.log
-    gource my-svn-project.log
-```
+FFmpeg is not bundled, fetched, or invoked through a shell. If it is absent,
+video export fails before publishing a final file. Frame-directory export does
+not require FFmpeg.
 
-You can also have Gource write a copy of the log file in its own format:
+## Commands
 
-```
-    gource --output-custom-log my-project-custom.log
-```
+The Rust binary has three subcommands. Legacy Gource flags are not accepted by
+this CLI; an unknown option is an error rather than an ignored compatibility
+alias.
 
-CVS Support:
-
-Use 'cvs2cl' to generate the log and then pass it to Gource:
-
-```
-    cvs2cl --chrono --stdout --xml -g-q > my-cvs-project.log
-    gource my-cvs-project.log
+```text
+gource-app [--config FILE] view [options]
+gource-app [--config FILE] export [options]
+gource-app [--config FILE] diagnose [options]
 ```
 
-Custom Log Format:
+Run `gource-app --help` or `gource-app <command> --help` for the generated
+syntax. The most useful common options are:
 
-If you want to use Gource with something other than the supported systems,
-there is a pipe ('|') delimited custom log format:
+| Option | Meaning |
+| --- | --- |
+| `--input PATH` | Read a regular custom-log file, `-` for finite stdin, or a local Git repository directory. |
+| `--cache-dir PATH` | Opt in to the private persistent indexed-history cache. Omitted means no cache. |
+| `--cache-bytes BYTES` | Finite aggregate cache-entry quota (default 4 GiB when caching is enabled). |
+| `--viewport WIDTHxHEIGHT` | Physical viewport; default `1280x720`, with a 32,768-pixel edge limit. |
+| `--width PIXELS --height PIXELS` | Alternate viewport spelling; both values are required. |
+| `--seconds-per-day SECONDS` | Repository time represented by one simulated day (default `10`). |
+| `--realtime` / `--no-realtime` | Select or explicitly disable real-time repository playback. |
+| `--auto-skip-seconds SECONDS` | Skip idle repository gaps longer than the value (default `3`). Alias: `--auto-skip`. |
+| `--time-scale FACTOR` | Multiply canonical playback speed (default `1`). |
+| `--file-idle-seconds SECONDS` | Keep deleted files visible for the configured duration; unset or `0` disables expiry. Alias: `--file-idle`. |
+| `--camera overview|track` | Select the automatic camera policy. |
+| `--seed SEED` | Select the deterministic layout seed (default `31`). |
+| `--filter GLOB` | Keep events whose path matches a glob. Repeat to replace the configured filter list; any match is retained. |
+| `--max-record-bytes BYTES` | Maximum physical record size (default 1 MiB). |
+| `--max-input-bytes BYTES` | Maximum finite input size (default 8 GiB). |
+| `--max-path-bytes BYTES` | Maximum normalized path size (default 64 KiB). |
+| `--max-contributor-bytes BYTES` | Maximum contributor size (default 4 KiB). |
+| `--max-path-components COUNT` | Maximum lexical path depth (default 256). |
+| `--max-events COUNT` | Maximum indexed events (the app default is `u64::MAX`; choose a smaller finite bound when required). |
+| `--working-memory-bytes BYTES` | Total parser/index working-memory budget (default 128 MiB). |
+| `--working-disk-bytes BYTES` | Temporary external-sort disk budget (default 16 GiB). |
+| `--run-fan-in COUNT` | Maximum sorted runs merged at once (default `32`). |
 
-    timestamp - An ISO 8601 or unix timestamp of when the update occurred.
-    username  - The name of the user who made the update.
-    type      - initial for the update type - (A)dded, (M)odified or (D)eleted.
-    file      - Path of the file updated.
-    colour    - A colour for the file in hex (FFFFFF) format. Optional.
+All limits must be non-zero. Limit failures are errors, not EOF or silent
+truncation. The parser consumes a finite source to EOF before publishing an
+indexed history.
 
-Caption Log Format:
+### `view`
 
-Gource can display captions along the timeline by specifying a caption file
-(using --caption-file) in the pipe ('|') delimited format below:
+Open the interactive native window:
 
-    timestamp - An ISO 8601 or A unix timestamp of when to display the caption.
-    caption   - The caption
+```sh
+./target/release/gource-app view \
+  --input tests/fixtures/visual-hierarchy-activity.log \
+  --viewport 1280x720
+```
 
-Recording Videos:
+The current input controls are deliberately small and deterministic:
 
-See the guide on the homepage for examples of recording videos with Gource:
+- `Space` or `P` pauses/resumes;
+- `Right Arrow` or `N` advances to the next event; `Left Arrow` seeks one
+  repository second backward;
+- `+`/`=` and `-` increase or halve playback rate;
+- keypad `+`/`-` zoom the presentation camera;
+- `O`, `T`, and `M` select overview, track, and manual camera modes;
+- `R` resets the camera; `Esc` or `Q` quits;
+- left-click selects a scene point, right-drag pans, and the mouse wheel zooms.
 
-https://github.com/acaudwell/Gource/wiki/Videos
+### `export`
 
-More Information:
+A frame export writes a new directory of PNG frames and a `manifest.toml`; it
+does not require FFmpeg:
 
-Visit the Gource homepage for guides and examples of using Gource with various
-version control systems:
+```sh
+./target/release/gource-app export \
+  --input tests/fixtures/single-event.log \
+  --output /tmp/gource-frames \
+  --viewport 320x180 \
+  --frame-rate 60 \
+  --start 0 \
+  --end 1
+```
 
-https://gource.io
+`--output` is required. `--frame-rate` accepts an exact FPS or a rational such
+as `30000/1001` (alias: `--fps`). `--start` and `--end` are non-negative
+repository timestamps; the end is exclusive. If `--end` is omitted, the app
+uses one second after the last event. Existing output paths are rejected, and
+failed or cancelled exports remove their private staging artifact.
 
-Interface:
+Use `--video` to select the supervised FFmpeg sink:
 
-The time shown in the top left of the screen is set initially from the first
-log entry read and is incremented according to the simulation speed
-(--seconds-per-day).
+```sh
+./target/release/gource-app export \
+  --input tests/fixtures/single-event.log \
+  --output /tmp/gource.mkv \
+  --video \
+  --frame-rate 60 \
+  --start 0 \
+  --end 1
+```
 
-Pressing SPACE at any time will pause/resume the simulation. While paused you
-may use the mouse to inspect the detail of individual files and users.
+The sink passes raw RGBA frames to `ffmpeg` through stdin and requests FFV1
+level 3, intra frames, Matroska output, and the configured dimensions/rate. It
+uses a three-frame queue, a three-frame byte cap, a 64 KiB stderr bound, and a
+30-second deadline. Backpressure is applied instead of dropping frames. A
+non-zero exit, timeout, cancellation, or writer failure kills and reaps the
+child and leaves no final video. See [`docs/export.md`](docs/export.md) and
+[`docs/security.md`](docs/security.md).
 
-TAB cycles through selecting the current visible users.
+### `diagnose`
 
-The camera mode, either tracking activity or showing the entire code tree, can
-be toggled using the Middle mouse button.
+`diagnose` parses/indexes once and measures a complete serial replay and a
+bounded parallel replay without creating a window or GPU context:
 
-You can drag the left mouse button to manually control the camera. The right
-mouse button rotates the view.
+```sh
+./target/release/gource-app diagnose \
+  --input tests/fixtures/single-event.log \
+  --threads 1
+```
 
-Interactive keyboard commands:
+It prints one JSON object to stdout with `ingest_ms`, `serial_ms`,
+`parallel_ms`, `events`, `final_tick`, `snapshots_equal`, and
+`configured_threads`. The command exits successfully only when serial and
+parallel snapshots compare equal. `--end SECONDS` (alias: `--target`) limits
+both replays to a repository timestamp. This is a replay diagnostic, not an
+end-to-end renderer or encoder benchmark.
 
-    (V)   Toggle camera mode
-    (C)   Displays Gource logo
-    (K)   Toggle file extension key
-    (M)   Toggle mouse visibility
-    (N)   Jump forward in time to next log entry
-    (S)   Randomize colours
-    (D)   Toggle directory name display mode
-    (F)   Toggle file name display mode
-    (U)   Toggle user name display mode
-    (G)   Toggle display of users
-    (T)   Toggle display of directory tree edges
-    (R)   Toggle display of root directory edges
-    (<>)  Adjust time scale / user avatar movement speed
-    (+-)  Adjust simulation speed
-    (Keypad +-) Adjust camera zoom
-    (TAB) Cycle through visible users
-    (F12) Screenshot
-    (Alt+Enter) Fullscreen toggle
-    (ESC) Quit
+The measured CPU replay evidence and its exact workload/host description are in
+[`docs/performance.md#measured-cpu-replay-evidence-2026-09-13`](docs/performance.md#measured-cpu-replay-evidence-2026-09-13).
 
-Copyright
-=========
+## Input formats and local Git directories
+
+The first custom-log format is finite and pipe-delimited:
+
+```text
+timestamp|contributor|A|path
+timestamp|contributor|M|path|#rrggbb
+timestamp|contributor|D|path/
+```
+
+Timestamps may be signed epoch seconds or the documented UTC/offset date
+forms. A record has exactly four fields, or five fields with a six-digit
+hexadecimal colour. Input is UTF-8; paths are lexical repository names using
+`/`, not host filesystem paths. Records are globally ordered by
+`(timestamp, source_sequence)`, so equal timestamps retain source order and
+duplicates remain events. Empty contributors normalize to `Unknown`, and an
+empty action normalizes to `A`; malformed records, traversal components, and
+unsupported actions fail with a bounded diagnostic.
+
+A directory supplied through `--input` selects the built-in local Git adapter:
+
+```sh
+./target/release/gource-app view --input /path/to/local/repository
+./target/release/gource-app export \
+  --input /path/to/local/repository \
+  --output /tmp/repository-frames \
+  --start 0 --end 60
+```
+
+The adapter accepts a local directory, validates and snapshots one revision,
+then invokes the local `git` executable with a fixed argument vector and raw
+NUL-delimited output. It disables pagers, replacement objects, external diffs,
+text conversion, notes, signatures, rename detection, and lazy fetch. The
+repository path and Git ref data are arguments, never shell text. Git is not
+bundled or downloaded, and the adapter performs no remote fetch. A missing Git
+executable, non-repository directory, malformed output, timeout, cancellation,
+limit failure, or unsuccessful child exits without publishing a partial
+history. See [`docs/security.md`](docs/security.md).
+
+## Configuration and cache
+
+`--config FILE` loads one TOML file. If `--config` is omitted,
+`GOURCE_CONFIG` may select the file. Precedence is built-in defaults, TOML,
+known `GOURCE_*` environment values, then explicit command-line options. Paths
+inside the file are interpreted relative to the process working directory; the
+process directory is never changed. Command-specific `[view]`, `[export]`,
+and `[diagnose]` tables override shared keys for that command. There is no
+legacy C++ `.conf`/`.ini` loader and no `--load-config` or `--save-config`
+option in the Rust CLI. See [`docs/configuration.md`](docs/configuration.md)
+for the complete key and environment table.
+
+The cache is opt-in and applies to regular custom-log files only. `--cache-dir`
+creates or opens a private directory; stdin and Git-directory inputs are parsed
+without persistent cache lookup. The default aggregate quota is 4 GiB, and
+`--cache-bytes` must be finite and non-zero. Cache entries are keyed by exact
+input bytes, ingest schema/options, and limits; complete entries are checksummed,
+validated before use, and atomically staged before publication. Cache roots are
+owner-private (mode `0700`/equivalent ACL) and entry files are private. Corrupt
+or stale entries are discarded as misses. See [`docs/cache.md`](docs/cache.md)
+for caps, eviction, privacy, and failure behavior.
+
+## Native packaging
+
+The repository includes target-qualified packaging scripts. They build with the
+pinned toolchain, run packaged `--help` and `diagnose` smokes, verify required
+archive entries, and emit a SHA-256 sidecar:
+
+```sh
+bash packaging/linux-x86_64.sh --output-dir dist
+bash packaging/macos.sh --target x86_64-apple-darwin --output-dir dist
+bash packaging/macos.sh --target arm64-apple-darwin --output-dir dist
+# Windows PowerShell:
+.\\packaging\\windows-x86_64.ps1 -OutputDirectory dist
+```
+
+A native archive contains `bin/gource-app`, `COPYING`,
+`THIRD_PARTY_NOTICES`, this README, `data/gource.style`, the font notice,
+`data/gource.1`, and the single-event fixture. It does not bundle FFmpeg,
+Git, or the unresolved FreeSans/sprite assets. Packaging smoke proves the
+archive and CPU diagnostic are self-contained; it does not prove interactive
+window behavior, GPU compatibility, or video export on every target. Read
+[`docs/releasing.md`](docs/releasing.md) before publishing an archive.
+
+## Visual reference and evidence limits
+
+The corrected headless reference export is kept at
+`target/gource-smoke-frames-2/`. The canonical reference manifest is
+`tests/reference/manifest.toml`; it pins
+`tests/fixtures/visual-hierarchy-activity.log`, 8 events, `320x180`, realtime
+playback, 2 FPS, repository range `[0,65)`, overview camera, auto-skip `3`,
+time-scale `1`, seed `31`, and 130 frames. Review points are frames 4, 64,
+and 129 on the recorded llvmpipe Vulkan adapter. They are visual evidence for
+that host/configuration, not a cross-GPU or cross-platform support claim.
+Same-backend comparison uses `max_channel_abs_delta = 8` and
+`max_differing_pixel_fraction = 0.02` (2%); a pixel differs when any RGBA
+channel exceeds the 8-level bound. `exact_image_hash = false`, and
+cross-backend review is structural/manual. The reproducibility boundary is
+documented in [`docs/export.md`](docs/export.md).
+
+## Legacy C++ application and license
+
+The original C++ application, assets, build scripts, and historical options
+remain in the tree. See [`INSTALL`](INSTALL) for its dependency and autotools
+instructions. Do not apply the Rust subcommand syntax to the legacy binary.
 
 Gource - software version control visualization
 Copyright (C) 2009 Andrew Caudwell <acaudwell@gmail.com>
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 3 of the License, or (at your option) any later
+version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License along with
+this program. If not, see <http://www.gnu.org/licenses/>.
