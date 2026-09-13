@@ -58,6 +58,35 @@ FFmpeg is not bundled, fetched, or invoked through a shell. If it is absent,
 video export fails before publishing a final file. Frame-directory export does
 not require FFmpeg.
 
+## Dogfood
+
+Run the committed end-to-end local workflow against this repository:
+
+```sh
+./scripts/dogfood.sh
+```
+
+The script runs formatting, strict Clippy, the workspace tests, and a locked
+release build. It then ingests this Git repository through serial and parallel
+replay over a bounded one-week repository-time window, validates a
+persistent-cache miss and hit using the deterministic custom-log fixture,
+exports that fixture as 130 PNG frames, verifies an FFV1 video with `ffprobe`,
+and invokes the native package wrapper for supported Unix hosts. Each run
+keeps its evidence in a unique `target/dogfood/run.*` directory.
+
+Pass another local Git repository as the sole positional argument. Set
+`DOGFOOD_THREADS` or `DOGFOOD_HISTORY_SECONDS` to change the fixed worker count
+or bounded replay window. Add `--view` to launch the interactive viewer after
+every automated check passes:
+
+```sh
+./scripts/dogfood.sh --view /path/to/local/repository
+```
+
+The Unix dogfood runner requires Bash, Cargo, Git, Python 3, FFmpeg, and
+`ffprobe`, plus a working native `wgpu` adapter. It never fetches repository
+history or runtime assets.
+
 ## Commands
 
 The Rust binary has three subcommands. Legacy Gource flags are not accepted by

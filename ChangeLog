@@ -10,6 +10,9 @@
    packaged `--help`/`diagnose` smoke checks, and SHA-256 sidecars.
  * Documented the current CLI, cache privacy and limits, FFmpeg process
    boundary, native evidence limits, and the measured replay diagnostic.
+ * Added `scripts/dogfood.sh` for repeatable local quality gates, bounded
+   self-repository replay, cache miss/hit validation, PNG/FFV1 export, native
+   packaging, retained evidence artifacts, and optional interactive launch.
 
 0.57:
  * Handle loading indexed colour images (sokripon).
